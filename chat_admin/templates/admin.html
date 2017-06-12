@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+</head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+    function get_user_list(){
+        $.ajax({
+            type: "GET",
+            content_type: "application/json",
+            url: "{{ get_users_url }}",
+            dataType: "json",
+            success: function (data, text_status, jqXHR) {
+                var all_users_array = data.users;
+                var form_element = document.createElement('form');
+                var ul_element = document.createElement('ul');
+
+                for (var i = 0; i < all_users_array.length; i++){
+                   var name = all_users_array[i].name;
+                   var rel = all_users_array[i].rel;
+                   var href = all_users_array[i].href;
+                   var liElement = document.createElement('li');
+                   liElement.id = rel;
+                   var divElement = document.createElement('div');
+                   divElement.innerText = name;
+                   var buttonElement = document.createElement('input');
+                   buttonElement.type = "button";
+                   buttonElement.value = rel;
+                   buttonElement.name = href;
+                   buttonElement.addEventListener('click', user_add_remove);
+                   liElement.appendChild(divElement);
+                   liElement.appendChild(buttonElement);
+                   ul_element.appendChild(liElement);
+                }
+
+                form_element.appendChild(ul_element);
+                document.getElementById("users").appendChild(form_element);
+            }
+        })
+    }
+    function user_add_remove(event) {
+        var action = event.currentTarget.value;
+        var href = event.currentTarget.name;
+        if (action == "add"){
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                url: href,
+                success: function (data, text_status, jqXHR) {
+                   get_user_list();
+                }
+            })
+        }else {
+            $.ajax({
+                type: "DELETE",
+                contentType: "application/json",
+                url: href,
+                success: function (data, text_status, jqXHR) {
+                   get_user_list();
+                }
+            })
+        }
+
+    }
+
+    window.onload = function () {
+        get_user_list();
+
+    }
+</script>
+<body>
+<div id="users"></div>
+</body>
+</html>

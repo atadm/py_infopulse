@@ -1,0 +1,135 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+
+</head>
+<body>
+<table>
+    <tr>
+        <td>
+            <form>
+                <textarea id="inputmessage"></textarea>
+            </form>
+        </td>
+        <td>
+            <div id="activeusers"></div>
+        </td>
+    </tr>
+     <tr>
+        <td>
+            <form>
+                <input type="text" id="outputmessage"/>
+            </form>
+
+        </td>
+        <td>
+            <form>
+                <input type="button" id="sent" value="send"/>
+                <input type="button" id="broadcast" value="broadcast"/>
+                <input type="button" id="logout" value="logout"/>
+            </form>
+        </td>
+    </tr>
+</table>
+<script src="http://cdn.sockjs.org/sockjs-0.3.min.js"></script>
+    <script>
+        var socket = new SockJS('{{ sockjs_url }}');
+        document.getElementById("sent").addEventListener("click",sent);
+        document.getElementById("broadcast").addEventListener("click",broadcast);
+        document.getElementById("logout").addEventListener("click",logout);
+        socket.onopen = function(){
+            alert('Connect.......');
+            send_login();
+        }
+        socket.onclose = function(event){
+            if (event.wasClean){
+                alert('Close');
+            }
+            else {
+                alert('Error'+event.code);
+            }
+
+        }
+        socket.onerror = function(error){
+            alert(error.message);
+        }
+        socket.onmessage = function(event){
+            var message_json = JSON.parse(event.data);
+            if (typeof message_json.auth !== 'undefined' &&
+            message_json.auth == "yes"){
+                console.log("authorisation successful");
+            }
+            if (typeof message_json.auth !== 'undefined' &&
+            message_json.auth=="no"){
+                console.log("authorisation failure");
+                window.location.href = "/";
+            }
+            if (typeof message_json.list !== 'undefined'){
+                var active_users = message_json.list;
+                output = "<ul>";
+                //console.log(active_users);
+                for (var i=0; i<active_users.length; i++){
+                    output += "<li class='list' id="+active_users[i]+
+                            ">"+active_users[i]+ "</li>";
+                }
+                output += "</ul>";
+                document.getElementById("activeusers").innerHTML = output
+                var list_array = document.getElementsByClassName("list");
+                for (var j=0; j<list_array.length; j++){
+                    list_array[j].addEventListener('click',add_user);
+                }
+            }
+            if (typeof message_json.name !== 'undefined'){
+                output = message_json.name+":"+message_json.message;
+                document.getElementById("inputmessage").value += output;
+            }
+        }
+        function sent(){
+            var text = document.getElementById("outputmessage").value;
+            var text_array = text.split(":");
+            var json_message = {};
+            json_message["name"] = text_array[0];
+            json_message["message"] = text_array[1];
+            socket.send(JSON.stringify(json_message));
+        }
+        function broadcast(){
+            var text = document.getElementById("outputmessage").value;
+            var json_message = {};
+            json_message["broadcast"]=text;
+            socket.send(JSON.stringify(json_message));
+        }
+
+        function logout(){
+            var json_message = {};
+            json_message["logout"] = "";
+            socket.send(JSON.stringify(json_message));
+            window.location.href="/";
+        }
+
+        function add_user(event){
+            var user = event.currentTarget.id;
+            document.getElementById("outputmessage").value = user+":";
+
+        }
+
+        function send_login(){
+            var sessionid = getCookie("sessionid");
+            var json_message = {};
+            json_message["sessionid"] = sessionid;
+            socket.send(JSON.stringify(json_message));
+        }
+
+        function getCookie(name) {
+            var matches = document.cookie.match(new RegExp(
+           "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g,
+                   '\\$1') + "=([^;]*)"));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+
+    </script>
+
+</body>
+</html>
